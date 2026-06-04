@@ -1,5 +1,6 @@
 name = "creatorforge"
 compatibility_date = "2026-06-04"
+pages_build_output_dir = "out"
 
 [[d1_databases]]
 binding = "DB"
