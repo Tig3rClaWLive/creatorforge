@@ -1,0 +1,12 @@
+name = "creatorforge"
+compatibility_date = "2026-06-04"
+pages_build_output_dir = ".vercel/output/static"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "creatorforge-db"
+database_id = "HIER_DEINE_D1_ID_EINTRAGEN"
+
+[[r2_buckets]]
+binding = "R2"
+bucket_name = "creatorforge-files"

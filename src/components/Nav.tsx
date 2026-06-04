@@ -1,0 +1,3 @@
+import Link from 'next/link';
+import ThemeToggle from './ThemeToggle';
+export default function Nav(){return <header className="sticky top-0 z-50 border-b border-zinc-200/70 bg-white/70 backdrop-blur dark:border-white/10 dark:bg-[#07070a]/70"><div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-4"><Link href="/" className="text-2xl font-black tracking-tight">Creator<span className="text-orange-500">Forge</span></Link><nav className="hidden gap-6 font-medium md:flex"><Link href="/downloads">Downloads</Link><Link href="/creator">Creator</Link><Link href="/upload">Teilen</Link><Link href="/admin">Admin</Link></nav><ThemeToggle/></div></header>}
