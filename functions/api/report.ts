@@ -1,0 +1,2 @@
+import { json, id, now, clean } from './_utils';
+export const onRequestPost = async ({request, env}) => { const b=await request.json<any>(); const upload=clean(b.upload_id,80); const reason=clean(b.reason,120); const msg=clean(b.message,1000); if(!upload||!reason) return json({error:'Upload und Grund fehlen.'},400); await env.DB.prepare('INSERT INTO reports (id,upload_id,reason,message,created_at) VALUES (?,?,?,?,?)').bind(id(),upload,reason,msg,now()).run(); return json({message:'Meldung wurde gespeichert.'}); };

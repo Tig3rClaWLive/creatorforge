@@ -1,0 +1,2 @@
+import { json, requireAdmin } from '../_utils';
+export const onRequestGet = async ({request, env}) => { const u=await requireAdmin(request,env); if(!u) return json({error:'Keine Adminrechte.'},403); const r=await env.DB.prepare('SELECT reports.*, uploads.title FROM reports LEFT JOIN uploads ON uploads.id=reports.upload_id ORDER BY reports.created_at DESC LIMIT 100').all(); return json({reports:r.results||[]}); };

@@ -1,0 +1,2 @@
+import { json } from './_utils';
+export const onRequestGet = async ({request, env}) => { const url=new URL(request.url); const key=url.searchParams.get('key'); if(!key || key.includes('..')) return json({error:'Datei fehlt.'},400); const obj=await env.R2.get(key); if(!obj) return json({error:'Nicht gefunden.'},404); return new Response(obj.body,{headers:{'content-type':obj.httpMetadata?.contentType||'application/octet-stream','cache-control':'public, max-age=3600'}}); };

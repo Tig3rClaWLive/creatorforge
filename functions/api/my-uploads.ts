@@ -1,0 +1,2 @@
+import { json, currentUser } from './_utils';
+export const onRequestGet = async ({request, env}) => { const u=await currentUser(request,env); if(!u) return json({error:'Nicht eingeloggt.'},401); const r=await env.DB.prepare('SELECT id,title,description,category,tags,status,rejection_reason,downloads,created_at,updated_at FROM uploads WHERE user_id=? ORDER BY created_at DESC').bind(u.id).all(); return json({uploads:r.results||[]}); };
