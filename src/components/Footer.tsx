@@ -1,0 +1,2 @@
+import Link from 'next/link';
+export default function Footer(){return <footer className="container py-12 text-sm text-zinc-500"><div className="flex flex-wrap gap-5"><Link href="/legal/impressum">Impressum</Link><Link href="/legal/datenschutz">Datenschutz</Link><Link href="/legal/agb">AGB</Link><Link href="/legal/upload-richtlinien">Upload-Richtlinien</Link></div><p className="mt-6">CreatorForge bleibt kostenlos. Unterstützung per Spende ist freiwillig.</p></footer>}

@@ -1,0 +1,2 @@
+import { Env,json,verifyPassword,createSession,sessionHeader } from './_utils';
+export const onRequestPost = async ({request,env})=>{const b=await request.json<any>(); const email=String(b.email||'').toLowerCase().trim(); const pass=String(b.password||''); const u=await env.DB.prepare('SELECT * FROM users WHERE email=?').bind(email).first<any>(); if(!u||!(await verifyPassword(pass,u.password_hash)))return json({error:'Login fehlgeschlagen.'},401); const sid=await createSession(env,u.id); return json({message:'Eingeloggt.'},200,sessionHeader(sid));}

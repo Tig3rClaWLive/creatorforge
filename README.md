@@ -1,52 +1,31 @@
-# CreatorForge
+# CreatorForge v2
 
-Kostenlose Plattform für OBS Overlays, TikTok Live Assets, YouTube/Kick Ressourcen, StreamDeck Icons, Bots und Creator-Tools.
+Kostenlose Creator-Plattform mit Cloudflare Pages, Pages Functions, D1 und R2.
 
-## Lokale Installation
+## Wichtig
+Vor dem Deployment in D1 ausführen:
 
-```bash
-npm install
-npm run dev
+```sql
+CREATE TABLE IF NOT EXISTS sessions (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  expires_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id);
+CREATE INDEX IF NOT EXISTS idx_sessions_expires ON sessions(expires_at);
 ```
 
-Dann öffnen:
+## Cloudflare Settings
+Build command: `npm run build`
+Build output directory: `out`
+Bindings:
+- DB -> creatorforge-db
+- R2 -> creatorforge-files
 
-```text
-http://localhost:3000
+## Admin machen
+Nach Registrierung in D1 Console ausführen:
+
+```sql
+UPDATE users SET role='admin' WHERE email='DEINE_EMAIL';
 ```
-
-## GitHub Upload
-
-```bash
-git init
-git add .
-git commit -m "CreatorForge v1"
-git branch -M main
-git remote add origin https://github.com/Tig3rClaWLive/creatorforge.git
-git push -u origin main
-```
-
-## Cloudflare Pages
-
-1. Workers & Pages öffnen
-2. Create application
-3. Pages -> Import existing Git repository
-4. GitHub verbinden
-5. Repository `creatorforge` auswählen
-6. Build command:
-
-```bash
-npm run build
-```
-
-7. Output directory:
-
-```text
-.next
-```
-
-Hinweis: Für echtes Cloudflare Pages Deployment mit Next.js wird im nächsten Schritt `@cloudflare/next-on-pages` final konfiguriert.
-
-## Rechtliches
-
-Impressum, Datenschutz, AGB und Upload-Richtlinien sind nur Vorlagen und müssen vor Veröffentlichung geprüft und angepasst werden.

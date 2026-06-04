@@ -1,0 +1,2 @@
+import { Env,json,currentUser,now } from './_utils';
+export const onRequestPost = async ({request,env})=>{const u=await currentUser(request,env); if(!u)return json({error:'Nicht eingeloggt.'},401); const b=await request.json<any>(); await env.DB.prepare('UPDATE creator_profiles SET display_name=?, bio=?, twitch=?, tiktok=?, youtube=?, kick=?, discord=?, updated_at=? WHERE user_id=?').bind(b.display_name||'',b.bio||'',b.twitch||'',b.tiktok||'',b.youtube||'',b.kick||'',b.discord||'',now(),u.id).run(); return json({message:'Profil gespeichert.'});}
