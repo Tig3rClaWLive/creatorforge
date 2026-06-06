@@ -170,7 +170,55 @@ export async function onRequest(context) {
 
       return json({ creators: r.results || [] });
     }
+    if (path === "/api/admin/pending") {
+      const user = await currentUser(request, env);
 
+      if (!user || !["admin", "moderator"].includes(user.role)) {
+        return json({ error: "Kein Adminzugriff." }, 403);
+      }
+
+      const r = await env.DB.prepare(
+        `SELECT uploads.*,
+                creator_profiles.display_name
+         FROM uploads
+         LEFT JOIN creator_profiles
+           ON creator_profiles.user_id = uploads.user_id
+         WHERE uploads.status = 'pending'
+         ORDER BY uploads.created_at DESC`
+      ).all();
+
+      return json({ uploads: r.results || [] });
+    }
+
+    if (path === "/api/admin/moderate" && request.method === "POST") {
+      const user = await currentUser(request, env);
+
+      if (!user || !["admin", "moderator"].includes(user.role)) {
+        return json({ error: "Kein Adminzugriff." }, 403);
+      }
+
+      const b = await request.json();
+      const uploadId = clean(b.id, 80);
+      const action = clean(b.action, 20);
+
+      if (!uploadId || !["approve", "reject"].includes(action)) {
+        return json({ error: "Ungültige Aktion." }, 400);
+      }
+
+      const status = action === "approve" ? "approved" : "rejected";
+
+      await env.DB.prepare(
+        "UPDATE uploads SET status=? WHERE id=?"
+      )
+      .bind(status, uploadId)
+      .run();
+
+      return json({
+        message: action === "approve"
+          ? "Upload freigegeben."
+          : "Upload abgelehnt."
+      });
+    }
     return context.next();
   } catch (err) {
     return json({ error: "Serverfehler", detail: String(err?.message || err) }, 500);
