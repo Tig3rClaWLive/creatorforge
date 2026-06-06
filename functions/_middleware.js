@@ -15,7 +15,7 @@ const clean = (s, max = 500) => String(s ?? "").trim().slice(0, max);
 async function hashPassword(password) {
   const salt = crypto.getRandomValues(new Uint8Array(16));
   const key = await crypto.subtle.importKey("raw", enc.encode(password), "PBKDF2", false, ["deriveBits"]);
-  const bits = await crypto.subtle.deriveBits({ name: "PBKDF2", salt, iterations: 120000, hash: "SHA-256" }, key, 256);
+  const bits = await crypto.subtle.deriveBits({ name: "PBKDF2", salt, iterations: 100000, hash: "SHA-256" }, key, 256);
   return `pbkdf2$${b64(salt.buffer)}$${b64(bits)}`;
 }
 
@@ -24,7 +24,7 @@ async function verifyPassword(password, stored) {
   if (alg !== "pbkdf2" || !saltB || !hashB) return false;
   const salt = fromB64(saltB);
   const key = await crypto.subtle.importKey("raw", enc.encode(password), "PBKDF2", false, ["deriveBits"]);
-  const bits = await crypto.subtle.deriveBits({ name: "PBKDF2", salt, iterations: 120000, hash: "SHA-256" }, key, 256);
+  const bits = await crypto.subtle.deriveBits({ name: "PBKDF2", salt, iterations: 100000, hash: "SHA-256" }, key, 256);
   return b64(bits) === hashB;
 }
 
