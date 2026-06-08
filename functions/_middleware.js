@@ -331,6 +331,60 @@ export async function onRequest(context) {
           ? "Upload freigegeben."
           : "Upload abgelehnt."
       });
+    }    if (path === "/api/home") {
+      const latest = await env.DB.prepare(
+        `SELECT uploads.id,
+                uploads.title,
+                uploads.description,
+                uploads.category,
+                uploads.downloads,
+                uploads.preview_key,
+                uploads.created_at,
+                creator_profiles.display_name
+         FROM uploads
+         LEFT JOIN creator_profiles
+           ON creator_profiles.user_id = uploads.user_id
+         WHERE uploads.status = 'approved'
+         ORDER BY uploads.created_at DESC
+         LIMIT 6`
+      ).all();
+
+      const popular = await env.DB.prepare(
+        `SELECT uploads.id,
+                uploads.title,
+                uploads.description,
+                uploads.category,
+                uploads.downloads,
+                uploads.preview_key,
+                uploads.created_at,
+                creator_profiles.display_name
+         FROM uploads
+         LEFT JOIN creator_profiles
+           ON creator_profiles.user_id = uploads.user_id
+         WHERE uploads.status = 'approved'
+         ORDER BY uploads.downloads DESC
+         LIMIT 6`
+      ).all();
+
+      const creators = await env.DB.prepare(
+        `SELECT creator_profiles.display_name,
+                creator_profiles.avatar_url,
+                creator_profiles.banner_url,
+                COUNT(uploads.id) AS uploads_count
+         FROM creator_profiles
+         LEFT JOIN uploads
+           ON uploads.user_id = creator_profiles.user_id
+          AND uploads.status = 'approved'
+         GROUP BY creator_profiles.id
+         ORDER BY uploads_count DESC
+         LIMIT 6`
+      ).all();
+
+      return json({
+        latest: latest.results || [],
+        popular: popular.results || [],
+        creators: creators.results || []
+      });
     }
     return context.next();
   } catch (err) {
