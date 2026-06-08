@@ -218,6 +218,84 @@ export async function onRequest(context) {
           ? "Upload freigegeben."
           : "Upload abgelehnt."
       });
+    }    if (path === "/api/download" && request.method === "GET") {
+      const uploadId = clean(url.searchParams.get("id"), 80);
+
+      if (!uploadId) {
+        return json({ error: "ID fehlt." }, 400);
+      }
+
+      const upload = await env.DB.prepare(
+        "SELECT * FROM uploads WHERE id=? AND status='approved'"
+      )
+      .bind(uploadId)
+      .first();
+
+      if (!upload) {
+        return json({ error: "Nicht gefunden." }, 404);
+      }
+
+      const obj = await env.R2.get(upload.file_key);
+
+      if (!obj) {
+        return json({ error: "Datei fehlt." }, 404);
+      }
+
+      await env.DB.prepare(
+        "UPDATE uploads SET downloads=downloads+1 WHERE id=?"
+      )
+      .bind(uploadId)
+      .run();
+
+      let contentType =
+        obj.httpMetadata?.contentType ||
+        upload.file_type ||
+        "application/octet-stream";
+
+      let ext = "";
+
+      if (contentType.includes("png")) ext = ".png";
+      else if (contentType.includes("jpeg") || contentType.includes("jpg")) ext = ".jpg";
+      else if (contentType.includes("webp")) ext = ".webp";
+      else if (contentType.includes("gif")) ext = ".gif";
+      else if (contentType.includes("zip")) ext = ".zip";
+      else if (contentType.includes("mp4")) ext = ".mp4";
+      else if (contentType.includes("webm")) ext = ".webm";
+
+      let baseName = String(upload.title || "creatorforge-download")
+        .replace(/[^a-zA-Z0-9._-]/g, "_");
+
+      if (ext && !baseName.toLowerCase().endsWith(ext)) {
+        baseName += ext;
+      }
+
+      return new Response(obj.body, {
+        headers: {
+          "content-type": contentType,
+          "content-disposition": `attachment; filename="${baseName}"`,
+        },
+      });
+    }
+
+    if (path === "/api/file" && request.method === "GET") {
+      const key = url.searchParams.get("key");
+
+      if (!key || key.includes("..")) {
+        return json({ error: "Datei fehlt." }, 400);
+      }
+
+      const obj = await env.R2.get(key);
+
+      if (!obj) {
+        return json({ error: "Nicht gefunden." }, 404);
+      }
+
+      return new Response(obj.body, {
+        headers: {
+          "content-type": obj.httpMetadata?.contentType || "application/octet-stream",
+          "cache-control": "public, max-age=3600",
+        },
+      });
     }
     return context.next();
   } catch (err) {
