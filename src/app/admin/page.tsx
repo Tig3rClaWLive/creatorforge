@@ -33,10 +33,26 @@ export default function Admin() {
 
     if (confirmText && !confirm(confirmText)) return;
 
-    const r = await fetch('/api/admin/moderate', {
+    const endpoint =
+      action === 'delete'
+        ? '/api/admin/delete-upload'
+        : '/api/admin/moderate';
+
+    const body =
+      action === 'delete'
+        ? {
+            id,
+            reason: 'Manuell durch Admin gelöscht',
+          }
+        : {
+            id,
+            action,
+          };
+
+    const r = await fetch(endpoint, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ id, action }),
+      body: JSON.stringify(body),
     });
 
     const j = await r.json();
@@ -49,7 +65,9 @@ export default function Admin() {
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="text-5xl font-black">Admin</h1>
-          <p className="mt-3 text-zinc-400">Uploads prüfen, freigeben und verwalten.</p>
+          <p className="mt-3 text-zinc-400">
+            Uploads prüfen, freigeben und verwalten.
+          </p>
         </div>
 
         <Link href="/admin/users" className="btn btn-soft">
@@ -63,22 +81,33 @@ export default function Admin() {
             <p className="text-sm text-zinc-400">Uploads gesamt</p>
             <b className="text-3xl">{stats.totalUploads}</b>
           </div>
+
           <div className="card p-5">
             <p className="text-sm text-zinc-400">Wartend</p>
-            <b className="text-3xl text-orange-300">{stats.pendingUploads}</b>
+            <b className="text-3xl text-orange-300">
+              {stats.pendingUploads}
+            </b>
           </div>
+
           <div className="card p-5">
             <p className="text-sm text-zinc-400">Freigegeben</p>
-            <b className="text-3xl text-green-300">{stats.approvedUploads}</b>
+            <b className="text-3xl text-green-300">
+              {stats.approvedUploads}
+            </b>
           </div>
+
           <div className="card p-5">
             <p className="text-sm text-zinc-400">Abgelehnt</p>
-            <b className="text-3xl text-red-300">{stats.rejectedUploads}</b>
+            <b className="text-3xl text-red-300">
+              {stats.rejectedUploads}
+            </b>
           </div>
+
           <div className="card p-5">
             <p className="text-sm text-zinc-400">Nutzer</p>
             <b className="text-3xl">{stats.users}</b>
           </div>
+
           <div className="card p-5">
             <p className="text-sm text-zinc-400">Downloads</p>
             <b className="text-3xl">{stats.downloads}</b>
@@ -94,9 +123,12 @@ export default function Admin() {
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
                 <h2 className="text-2xl font-black">{x.title}</h2>
+
                 <p className="mt-2 text-zinc-400">{x.description}</p>
+
                 <p className="mt-3 text-sm text-zinc-500">
-                  Creator: {x.display_name || x.email || 'Unbekannt'} · Kategorie: {x.category} · Downloads: {x.downloads}
+                  Creator: {x.display_name || x.email || 'Unbekannt'} ·
+                  Kategorie: {x.category} · Downloads: {x.downloads}
                 </p>
               </div>
 
@@ -106,13 +138,24 @@ export default function Admin() {
             </div>
 
             <div className="mt-5 flex flex-wrap gap-3">
-              <button onClick={() => act(x.id, 'approve')} className="btn btn-primary">
+              <button
+                onClick={() => act(x.id, 'approve')}
+                className="btn btn-primary"
+              >
                 Freigeben
               </button>
-              <button onClick={() => act(x.id, 'reject')} className="btn btn-soft">
+
+              <button
+                onClick={() => act(x.id, 'reject')}
+                className="btn btn-soft"
+              >
                 Ablehnen
               </button>
-              <button onClick={() => act(x.id, 'delete')} className="btn btn-soft">
+
+              <button
+                onClick={() => act(x.id, 'delete')}
+                className="btn btn-soft"
+              >
                 Löschen
               </button>
             </div>
