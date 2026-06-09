@@ -423,6 +423,45 @@ export async function onRequest(context) {
 
       return json({ upload });
     }
+    if (path === "/api/admin/delete-upload" && request.method === "POST") {
+      const user = await currentUser(request, env);
+
+      if (!user || !["admin", "moderator"].includes(user.role)) {
+        return json({ error: "Kein Adminzugriff." }, 403);
+      }
+
+      const b = await request.json();
+      const uploadId = clean(b.id, 80);
+      const reason = clean(b.reason || "Manuell gelöscht", 500);
+
+      const upload = await env.DB.prepare("SELECT * FROM uploads WHERE id=?")
+        .bind(uploadId)
+        .first();
+
+      if (!upload) {
+        return json({ error: "Upload nicht gefunden." }, 404);
+      }
+
+      if (upload.file_key) {
+        await env.R2.delete(upload.file_key);
+      }
+
+      if (upload.preview_key) {
+        await env.R2.delete(upload.preview_key);
+      }
+
+      await env.DB.prepare("DELETE FROM uploads WHERE id=?")
+        .bind(uploadId)
+        .run();
+
+      await env.DB.prepare(
+        "INSERT INTO admin_logs (id,admin_user_id,action,target_id,message,created_at) VALUES (?,?,?,?,?,?)"
+      )
+        .bind(id(), user.id, "delete_upload", uploadId, reason, now())
+        .run();
+
+      return json({ message: "Upload gelöscht." });
+    }    	
     return context.next();
   } catch (err) {
     return json({ error: "Serverfehler", detail: String(err?.message || err) }, 500);
