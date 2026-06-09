@@ -12,6 +12,73 @@ const b64 = (buf) => btoa(String.fromCharCode(...new Uint8Array(buf)));
 const fromB64 = (s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
 const clean = (s, max = 500) => String(s ?? "").trim().slice(0, max);
 
+function platformLabel(platform) {
+  return {
+    twitch: "Twitch",
+    tiktok: "TikTok",
+    youtube: "YouTube",
+    kick: "Kick",
+    discord: "Discord",
+    donation_url: "Spendenlink",
+  }[platform] || platform;
+}
+
+function validatePlatformUrl(platform, value) {
+  const raw = clean(value, 300);
+  if (!raw) return "";
+
+  let u;
+  try {
+    u = new URL(raw);
+  } catch {
+    throw new Error(`${platformLabel(platform)} muss ein vollständiger Link mit https:// sein.`);
+  }
+
+  if (u.protocol !== "https:") {
+    throw new Error(`${platformLabel(platform)} muss mit https:// beginnen.`);
+  }
+
+  const hosts = {
+    twitch: ["twitch.tv", "www.twitch.tv"],
+    tiktok: ["tiktok.com", "www.tiktok.com", "vm.tiktok.com"],
+    youtube: ["youtube.com", "www.youtube.com", "m.youtube.com", "youtu.be"],
+    kick: ["kick.com", "www.kick.com"],
+    discord: ["discord.gg", "discord.com", "www.discord.com"],
+    donation_url: [
+      "streamelements.com", "www.streamelements.com",
+      "streamlabs.com", "www.streamlabs.com",
+      "ko-fi.com", "www.ko-fi.com",
+      "paypal.me", "www.paypal.me",
+      "buymeacoffee.com", "www.buymeacoffee.com",
+      "patreon.com", "www.patreon.com",
+      "tipeeestream.com", "www.tipeeestream.com"
+    ],
+  };
+
+  const host = u.hostname.toLowerCase();
+  if (!hosts[platform]?.includes(host)) {
+    throw new Error(`${platformLabel(platform)} erlaubt nur passende Links. Eingetragen war: ${host}`);
+  }
+
+  if (["twitch", "tiktok", "kick"].includes(platform) && u.pathname.replace(/\/+$/, "").split("/").filter(Boolean).length < 1) {
+    throw new Error(`${platformLabel(platform)} braucht einen Profil-Link, nicht nur die Startseite.`);
+  }
+
+  if (platform === "youtube") {
+    const path = u.pathname.toLowerCase();
+    const ok = host === "youtu.be" || path.startsWith("/@") || path.startsWith("/c/") || path.startsWith("/channel/") || path.startsWith("/user/");
+    if (!ok) throw new Error("YouTube braucht einen Kanal-Link, zum Beispiel https://youtube.com/@deinname.");
+  }
+
+  if (platform === "discord") {
+    const path = u.pathname.toLowerCase();
+    const ok = host === "discord.gg" || path.startsWith("/invite/");
+    if (!ok) throw new Error("Discord braucht einen Einladungslink, zum Beispiel https://discord.gg/deincode.");
+  }
+
+  return u.toString();
+}
+
 async function hashPassword(password) {
   const salt = crypto.getRandomValues(new Uint8Array(16));
   const key = await crypto.subtle.importKey("raw", enc.encode(password), "PBKDF2", false, ["deriveBits"]);
@@ -102,13 +169,13 @@ export async function onRequest(context) {
         .run();
 
       await env.DB.prepare(
-        "INSERT INTO creator_profiles (id,user_id,display_name,bio,twitch,tiktok,youtube,kick,discord,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?)"
+        "INSERT INTO creator_profiles (id,user_id,display_name,bio,twitch,tiktok,youtube,kick,discord,donation_url,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)"
       )
-        .bind(id(), uid, name, "", "", "", "", "", "", now(), now())
+        .bind(id(), uid, name, "", "", "", "", "", "", "", now(), now())
         .run();
 
       const sid = await createSession(env, uid);
-      return json({ message: "Account erstellt." }, 200, sessionHeader(sid));
+      return json({ message: "Account wurde erstellt. Du bist als Creator angemeldet.", role: "creator" }, 200, sessionHeader(sid));
     }
 
     if (path === "/api/login" && request.method === "POST") {
@@ -157,6 +224,7 @@ export async function onRequest(context) {
                 creator_profiles.youtube,
                 creator_profiles.kick,
                 creator_profiles.discord,
+                creator_profiles.donation_url,
                 creator_profiles.avatar_url,
                 creator_profiles.banner_url,
                 COUNT(uploads.id) AS uploads_count
@@ -183,6 +251,7 @@ export async function onRequest(context) {
       const rejectedUploads = await env.DB.prepare("SELECT COUNT(*) AS count FROM uploads WHERE status='rejected'").first();
       const users = await env.DB.prepare("SELECT COUNT(*) AS count FROM users").first();
       const downloads = await env.DB.prepare("SELECT COALESCE(SUM(downloads),0) AS count FROM uploads").first();
+      const reports = await env.DB.prepare("SELECT COUNT(*) AS count FROM reports").first();
 
       return json({
         stats: {
@@ -192,11 +261,74 @@ export async function onRequest(context) {
           rejectedUploads: rejectedUploads?.count || 0,
           users: users?.count || 0,
           downloads: downloads?.count || 0,
+          reports: reports?.count || 0,
         }
       });
     }
 
-    if (path === "/api/admin/pending") {
+    if (path === "/api/admin/pending" || path === "/api/admin/uploads") {
+      const user = await currentUser(request, env);
+
+      if (!user || !["admin", "moderator"].includes(user.role)) {
+        return json({ error: "Kein Adminzugriff." }, 403);
+      }
+
+      const status = clean(url.searchParams.get("status"), 20);
+      const q = `%${clean(url.searchParams.get("q"), 100)}%`;
+
+      let stmt;
+      if (path === "/api/admin/uploads" && ["pending", "approved", "rejected"].includes(status)) {
+        stmt = env.DB.prepare(
+          `SELECT uploads.*,
+                  creator_profiles.display_name,
+                  users.email,
+                  COUNT(reports.id) AS reports_count
+           FROM uploads
+           LEFT JOIN creator_profiles ON creator_profiles.user_id = uploads.user_id
+           LEFT JOIN users ON users.id = uploads.user_id
+           LEFT JOIN reports ON reports.upload_id = uploads.id
+           WHERE uploads.status = ?
+             AND (uploads.title LIKE ? OR uploads.description LIKE ? OR uploads.category LIKE ? OR users.email LIKE ? OR creator_profiles.display_name LIKE ?)
+           GROUP BY uploads.id
+           ORDER BY uploads.created_at DESC
+           LIMIT 200`
+        ).bind(status, q, q, q, q, q);
+      } else if (path === "/api/admin/uploads") {
+        stmt = env.DB.prepare(
+          `SELECT uploads.*,
+                  creator_profiles.display_name,
+                  users.email,
+                  COUNT(reports.id) AS reports_count
+           FROM uploads
+           LEFT JOIN creator_profiles ON creator_profiles.user_id = uploads.user_id
+           LEFT JOIN users ON users.id = uploads.user_id
+           LEFT JOIN reports ON reports.upload_id = uploads.id
+           WHERE uploads.title LIKE ? OR uploads.description LIKE ? OR uploads.category LIKE ? OR users.email LIKE ? OR creator_profiles.display_name LIKE ?
+           GROUP BY uploads.id
+           ORDER BY uploads.created_at DESC
+           LIMIT 200`
+        ).bind(q, q, q, q, q);
+      } else {
+        stmt = env.DB.prepare(
+          `SELECT uploads.*,
+                  creator_profiles.display_name,
+                  users.email,
+                  COUNT(reports.id) AS reports_count
+           FROM uploads
+           LEFT JOIN creator_profiles ON creator_profiles.user_id = uploads.user_id
+           LEFT JOIN users ON users.id = uploads.user_id
+           LEFT JOIN reports ON reports.upload_id = uploads.id
+           WHERE uploads.status = 'pending'
+           GROUP BY uploads.id
+           ORDER BY uploads.created_at DESC`
+        );
+      }
+
+      const r = await stmt.all();
+      return json({ uploads: r.results || [] });
+    }
+
+    if (path === "/api/admin/reports") {
       const user = await currentUser(request, env);
 
       if (!user || !["admin", "moderator"].includes(user.role)) {
@@ -204,19 +336,22 @@ export async function onRequest(context) {
       }
 
       const r = await env.DB.prepare(
-        `SELECT uploads.*,
+        `SELECT reports.*,
+                uploads.id AS upload_id,
+                uploads.title AS upload_title,
+                uploads.status AS upload_status,
+                uploads.category AS upload_category,
                 creator_profiles.display_name,
                 users.email
-         FROM uploads
-         LEFT JOIN creator_profiles
-           ON creator_profiles.user_id = uploads.user_id
-         LEFT JOIN users
-           ON users.id = uploads.user_id
-         WHERE uploads.status = 'pending'
-         ORDER BY uploads.created_at DESC`
+         FROM reports
+         LEFT JOIN uploads ON uploads.id = reports.upload_id
+         LEFT JOIN creator_profiles ON creator_profiles.user_id = uploads.user_id
+         LEFT JOIN users ON users.id = uploads.user_id
+         ORDER BY reports.created_at DESC
+         LIMIT 200`
       ).all();
 
-      return json({ uploads: r.results || [] });
+      return json({ reports: r.results || [] });
     }
 
     if (path === "/api/admin/users") {
@@ -301,6 +436,10 @@ export async function onRequest(context) {
           await env.R2.delete(upload.preview_key);
         }
 
+        await env.DB.prepare("DELETE FROM reports WHERE upload_id=?")
+          .bind(uploadId)
+          .run();
+
         await env.DB.prepare("DELETE FROM uploads WHERE id=?")
           .bind(uploadId)
           .run();
@@ -311,19 +450,20 @@ export async function onRequest(context) {
         .bind(id(), user.id, "delete-upload", uploadId, "Upload gelöscht", now())
         .run();
 
-        return json({ message: "Upload gelöscht." });
+        return json({ message: "Upload wurde gelöscht." });
       }
 
       const status = action === "approve" ? "approved" : "rejected";
+      const reason = action === "reject" ? clean(b.reason || "Durch Moderation abgelehnt", 500) : "";
 
-      await env.DB.prepare("UPDATE uploads SET status=?, updated_at=? WHERE id=?")
-        .bind(status, now(), uploadId)
+      await env.DB.prepare("UPDATE uploads SET status=?, rejection_reason=?, updated_at=? WHERE id=?")
+        .bind(status, reason, now(), uploadId)
         .run();
 
       await env.DB.prepare(
         "INSERT INTO admin_logs (id,admin_user_id,action,target_id,message,created_at) VALUES (?,?,?,?,?,?)"
       )
-      .bind(id(), user.id, action, uploadId, `Upload ${status}`, now())
+      .bind(id(), user.id, action, uploadId, reason || `Upload ${status}`, now())
       .run();
 
       return json({
@@ -408,7 +548,8 @@ export async function onRequest(context) {
                 creator_profiles.tiktok,
                 creator_profiles.youtube,
                 creator_profiles.kick,
-                creator_profiles.discord
+                creator_profiles.discord,
+                creator_profiles.donation_url
          FROM uploads
          LEFT JOIN creator_profiles
            ON creator_profiles.user_id = uploads.user_id
@@ -450,6 +591,10 @@ export async function onRequest(context) {
         await env.R2.delete(upload.preview_key);
       }
 
+      await env.DB.prepare("DELETE FROM reports WHERE upload_id=?")
+        .bind(uploadId)
+        .run();
+
       await env.DB.prepare("DELETE FROM uploads WHERE id=?")
         .bind(uploadId)
         .run();
@@ -460,7 +605,7 @@ export async function onRequest(context) {
         .bind(id(), user.id, "delete_upload", uploadId, reason, now())
         .run();
 
-      return json({ message: "Upload gelöscht." });
+      return json({ message: "Upload wurde gelöscht." });
     }    	
     return context.next();
   } catch (err) {

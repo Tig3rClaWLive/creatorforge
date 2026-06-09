@@ -1,0 +1,51 @@
+CreatorForge Update - Admin, Meldungen, Social-Links, Spendenlink
+
+Geändert wurde:
+1. Adminbereich ausgebaut
+   - Tabs für Wartend, Freigegeben, Abgelehnt, Alle Uploads und Gemeldet
+   - Uploads können aus jeder Ansicht gelöscht werden
+   - Meldungen werden im Adminbereich angezeigt
+   - Gemeldete Uploads können direkt geöffnet, abgelehnt oder gelöscht werden
+
+2. Löschen verbessert
+   - löscht Upload-Datei aus R2
+   - löscht Vorschau aus R2
+   - löscht dazugehörige Meldungen aus der Datenbank
+   - schreibt Admin-Log
+
+3. Social-Link-Schutz
+   - Twitch erlaubt nur twitch.tv
+   - TikTok erlaubt nur tiktok.com / vm.tiktok.com
+   - YouTube erlaubt nur echte Kanal-Links wie youtube.com/@name, /channel/, /c/, /user/ oder youtu.be
+   - Kick erlaubt nur kick.com
+   - Discord erlaubt nur discord.gg oder discord.com/invite
+   - Links müssen mit https:// beginnen
+
+4. Spendenlink im Dashboard
+   - neues Feld Spendenlink
+   - erlaubt sind z. B. StreamElements, Streamlabs, Ko-fi, PayPal.me, BuyMeACoffee, Patreon, TipeeeStream
+
+5. Registrierung
+   - neue Accounts werden immer mit Rolle creator angelegt
+   - nach Registrierung erscheint eine Bestätigung
+   - kein automatisches direktes Wegspringen mehr ohne Hinweis
+
+WICHTIG: D1 Migration einmal ausführen
+Datei:
+db/v4_admin_social_donation.sql
+
+Cloudflare/Wrangler Beispiel:
+wrangler d1 execute DEINE_DB --file db/v4_admin_social_donation.sql
+
+Falls eine Spalte laut Fehler bereits existiert, ist das kein Code-Fehler. Dann diese eine ALTER-TABLE-Zeile in der SQL-Datei auskommentieren und den Rest erneut ausführen.
+
+Danach lokal testen:
+npm install
+npm run build
+
+Danach committen und pushen:
+git add src functions db package.json package-lock.json
+npm run build
+git status
+git commit -m "Expand admin moderation and validate creator links"
+git push

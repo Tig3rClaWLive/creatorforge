@@ -172,32 +172,38 @@ export default function DownloadDetail() {
 
             <div className="mt-5 flex flex-wrap gap-2">
               {upload.twitch && (
-                <a href={upload.twitch} target="_blank" className="btn btn-soft">
+                <a href={upload.twitch} target="_blank" rel="noopener noreferrer" className="btn btn-soft">
                   Twitch
                 </a>
               )}
 
               {upload.youtube && (
-                <a href={upload.youtube} target="_blank" className="btn btn-soft">
+                <a href={upload.youtube} target="_blank" rel="noopener noreferrer" className="btn btn-soft">
                   YouTube
                 </a>
               )}
 
               {upload.tiktok && (
-                <a href={upload.tiktok} target="_blank" className="btn btn-soft">
+                <a href={upload.tiktok} target="_blank" rel="noopener noreferrer" className="btn btn-soft">
                   TikTok
                 </a>
               )}
 
               {upload.kick && (
-                <a href={upload.kick} target="_blank" className="btn btn-soft">
+                <a href={upload.kick} target="_blank" rel="noopener noreferrer" className="btn btn-soft">
                   Kick
                 </a>
               )}
 
               {upload.discord && (
-                <a href={upload.discord} target="_blank" className="btn btn-soft">
+                <a href={upload.discord} target="_blank" rel="noopener noreferrer" className="btn btn-soft">
                   Discord
+                </a>
+              )}
+
+              {upload.donation_url && (
+                <a href={upload.donation_url} target="_blank" rel="noopener noreferrer" className="btn btn-primary">
+                  Spenden
                 </a>
               )}
             </div>

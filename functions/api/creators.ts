@@ -1,2 +1,24 @@
 import { json } from './_utils';
-export const onRequestGet = async ({env})=>{const r=await env.DB.prepare('SELECT creator_profiles.id,creator_profiles.user_id,display_name,bio,twitch,tiktok,youtube,kick,discord,avatar_url,banner_url,COUNT(uploads.id) AS uploads_count FROM creator_profiles LEFT JOIN uploads ON uploads.user_id=creator_profiles.user_id AND uploads.status=\'approved\' GROUP BY creator_profiles.id ORDER BY creator_profiles.created_at DESC').all(); return json({creators:r.results||[]});};
+
+export const onRequestGet = async ({env})=>{
+  const r=await env.DB.prepare(`
+    SELECT creator_profiles.id,
+           creator_profiles.user_id,
+           display_name,
+           bio,
+           twitch,
+           tiktok,
+           youtube,
+           kick,
+           discord,
+           donation_url,
+           avatar_url,
+           banner_url,
+           COUNT(uploads.id) AS uploads_count
+    FROM creator_profiles
+    LEFT JOIN uploads ON uploads.user_id=creator_profiles.user_id AND uploads.status='approved'
+    GROUP BY creator_profiles.id
+    ORDER BY creator_profiles.created_at DESC
+  `).all();
+  return json({creators:r.results||[]});
+};

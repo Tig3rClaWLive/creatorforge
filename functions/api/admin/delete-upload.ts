@@ -1,2 +1,22 @@
 import { json, requireAdmin, clean, now, id } from '../_utils';
-export const onRequestPost = async ({request, env}) => { const admin=await requireAdmin(request,env); if(!admin) return json({error:'Keine Adminrechte.'},403); const b=await request.json<any>(); const uploadId=clean(b.id,80); const up=await env.DB.prepare('SELECT * FROM uploads WHERE id=?').bind(uploadId).first<any>(); if(!up) return json({error:'Upload nicht gefunden.'},404); if(up.file_key) await env.R2.delete(up.file_key); if(up.preview_key) await env.R2.delete(up.preview_key); await env.DB.prepare('DELETE FROM uploads WHERE id=?').bind(uploadId).run(); await env.DB.prepare('INSERT INTO admin_logs (id,admin_user_id,action,target_id,message,created_at) VALUES (?,?,?,?,?,?)').bind(id(),admin.id,'delete_upload',uploadId,clean(b.reason,500),now()).run(); return json({message:'Upload gelöscht.'}); };
+
+export const onRequestPost = async ({request, env}) => {
+  const admin=await requireAdmin(request,env);
+  if(!admin) return json({error:'Keine Adminrechte.'},403);
+
+  const b=await request.json<any>();
+  const uploadId=clean(b.id,80);
+  const up=await env.DB.prepare('SELECT * FROM uploads WHERE id=?').bind(uploadId).first<any>();
+  if(!up) return json({error:'Upload nicht gefunden.'},404);
+
+  if(up.file_key) await env.R2.delete(up.file_key);
+  if(up.preview_key) await env.R2.delete(up.preview_key);
+
+  await env.DB.prepare('DELETE FROM reports WHERE upload_id=?').bind(uploadId).run();
+  await env.DB.prepare('DELETE FROM uploads WHERE id=?').bind(uploadId).run();
+  await env.DB.prepare('INSERT INTO admin_logs (id,admin_user_id,action,target_id,message,created_at) VALUES (?,?,?,?,?,?)')
+    .bind(id(),admin.id,'delete_upload',uploadId,clean(b.reason || 'Admin gelöscht',500),now())
+    .run();
+
+  return json({message:'Upload wurde gelöscht.'});
+};
