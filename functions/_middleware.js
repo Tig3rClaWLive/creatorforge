@@ -385,6 +385,43 @@ export async function onRequest(context) {
         popular: popular.results || [],
         creators: creators.results || []
       });
+    }    if (path === "/api/upload-detail") {
+      const uploadId = clean(url.searchParams.get("id"), 80);
+
+      if (!uploadId) {
+        return json({ error: "ID fehlt." }, 400);
+      }
+
+      const upload = await env.DB.prepare(
+        `SELECT uploads.id,
+                uploads.user_id,
+                uploads.title,
+                uploads.description,
+                uploads.category,
+                uploads.tags,
+                uploads.downloads,
+                uploads.created_at,
+                uploads.preview_key,
+                creator_profiles.display_name,
+                creator_profiles.avatar_url,
+                creator_profiles.twitch,
+                creator_profiles.tiktok,
+                creator_profiles.youtube,
+                creator_profiles.kick,
+                creator_profiles.discord
+         FROM uploads
+         LEFT JOIN creator_profiles
+           ON creator_profiles.user_id = uploads.user_id
+         WHERE uploads.id = ? AND uploads.status = 'approved'`
+      )
+        .bind(uploadId)
+        .first();
+
+      if (!upload) {
+        return json({ error: "Upload nicht gefunden." }, 404);
+      }
+
+      return json({ upload });
     }
     return context.next();
   } catch (err) {

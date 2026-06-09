@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 
 export default function Downloads() {
@@ -168,9 +169,9 @@ export default function Downloads() {
               )}
 
               <div className="mt-5 flex gap-3">
-                <a className="btn btn-primary" href={`/api/download?id=${u.id}`}>
-                  Download
-                </a>
+                <Link className="btn btn-primary" href={`/downloads/detail?id=${u.id}`}>
+                  Details
+                </Link>
 
                 <button className="btn btn-soft" onClick={() => report(u.id)}>
                   Melden
