@@ -1,27 +1,38 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 
 export default function DownloadDetail() {
   const [upload, setUpload] = useState<any>(null);
   const [msg, setMsg] = useState('');
+  const [id, setId] = useState('');
 
-  const id = useMemo(() => {
-    if (typeof window === 'undefined') return '';
-    return new URLSearchParams(window.location.search).get('id') || '';
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    setId(params.get('id') || '');
   }, []);
 
   useEffect(() => {
     if (!id) return;
 
-    fetch('/api/upload-detail?id=' + encodeURIComponent(id))
-      .then((r) => r.json())
-      .then((j) => {
-        if (j.error) setMsg(j.error);
+    async function load() {
+      try {
+        const r = await fetch('/api/upload-detail?id=' + encodeURIComponent(id));
+        const j = await r.json();
+
+        if (j.error) {
+          setMsg(j.error);
+          return;
+        }
+
         setUpload(j.upload || null);
-      })
-      .catch(() => setMsg('Upload konnte nicht geladen werden.'));
+      } catch {
+        setMsg('Upload konnte nicht geladen werden.');
+      }
+    }
+
+    load();
   }, [id]);
 
   async function report() {
@@ -165,21 +176,25 @@ export default function DownloadDetail() {
                   Twitch
                 </a>
               )}
+
               {upload.youtube && (
                 <a href={upload.youtube} target="_blank" className="btn btn-soft">
                   YouTube
                 </a>
               )}
+
               {upload.tiktok && (
                 <a href={upload.tiktok} target="_blank" className="btn btn-soft">
                   TikTok
                 </a>
               )}
+
               {upload.kick && (
                 <a href={upload.kick} target="_blank" className="btn btn-soft">
                   Kick
                 </a>
               )}
+
               {upload.discord && (
                 <a href={upload.discord} target="_blank" className="btn btn-soft">
                   Discord
