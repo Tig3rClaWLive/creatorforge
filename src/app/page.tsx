@@ -118,9 +118,22 @@ export default function Home() {
                   )}
                   <div>
                     <h3 className="text-2xl font-black">{c.display_name}</h3>
-                    <p className="text-sm text-zinc-400">{c.uploads_count || 0} Uploads</p>
+                    <p className="text-sm text-zinc-400">
+                      {c.uploads_count || 0} Uploads · {c.downloads_count || 0} Downloads
+                    </p>
                   </div>
                 </div>
+
+                {c.donation_url && (
+                  <a
+                    href={c.donation_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="btn btn-primary mt-5 w-full"
+                  >
+                    Creator unterstützen
+                  </a>
+                )}
               </div>
             </article>
           ))}

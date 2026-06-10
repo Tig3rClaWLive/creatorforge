@@ -15,7 +15,12 @@ function extFromMime(type: string) {
   if (t.includes('image/webp')) return '.webp';
   if (t.includes('image/gif')) return '.gif';
   if (t.includes('application/zip')) return '.zip';
+  if (t.includes('application/x-zip-compressed')) return '.zip';
   if (t.includes('application/pdf')) return '.pdf';
+  if (t.includes('text/html')) return '.html';
+  if (t.includes('text/css')) return '.css';
+  if (t.includes('javascript')) return '.js';
+  if (t.includes('application/json')) return '.json';
 
   return '';
 }

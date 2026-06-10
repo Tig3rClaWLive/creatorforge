@@ -1,51 +1,44 @@
-CreatorForge Update - Admin, Meldungen, Social-Links, Spendenlink
+CreatorForge Update – Admin, Creator-Profile und Download-Fix
 
-Geändert wurde:
-1. Adminbereich ausgebaut
-   - Tabs für Wartend, Freigegeben, Abgelehnt, Alle Uploads und Gemeldet
-   - Uploads können aus jeder Ansicht gelöscht werden
-   - Meldungen werden im Adminbereich angezeigt
-   - Gemeldete Uploads können direkt geöffnet, abgelehnt oder gelöscht werden
+Was geändert wurde:
+- Creator-Verzeichnis stark ausgebaut:
+  - Suche nach Creator
+  - Avatar/Banner-Karten
+  - Upload-Anzahl je Creator
+  - Download-Anzahl je Creator
+  - Spendenbutton sichtbar, wenn donation_url gesetzt ist
+  - Social-Buttons nur für gespeicherte gültige Links
+- Startseite zeigt Top-Creator jetzt nach Downloads/Uploads.
+- Download-Detailseite zeigt beim Creator Upload-/Downloadzahlen und Bio.
+- Upload speichert jetzt original_filename und mime_type.
+- Download liefert richtige Dateinamen und Dateiendungen aus.
+- Neue D1-Migration db/v5_file_metadata_creator_stats.sql hinzugefügt.
 
-2. Löschen verbessert
-   - löscht Upload-Datei aus R2
-   - löscht Vorschau aus R2
-   - löscht dazugehörige Meldungen aus der Datenbank
-   - schreibt Admin-Log
+Wichtig: Diese ZIP enthält bewusst KEIN node_modules, KEIN .next und KEIN .git.
 
-3. Social-Link-Schutz
-   - Twitch erlaubt nur twitch.tv
-   - TikTok erlaubt nur tiktok.com / vm.tiktok.com
-   - YouTube erlaubt nur echte Kanal-Links wie youtube.com/@name, /channel/, /c/, /user/ oder youtu.be
-   - Kick erlaubt nur kick.com
-   - Discord erlaubt nur discord.gg oder discord.com/invite
-   - Links müssen mit https:// beginnen
+Einspielen:
+1. Dateien aus der ZIP in deinen Projektordner kopieren und vorhandene Dateien ersetzen.
+2. Im Projektordner ausführen:
 
-4. Spendenlink im Dashboard
-   - neues Feld Spendenlink
-   - erlaubt sind z. B. StreamElements, Streamlabs, Ko-fi, PayPal.me, BuyMeACoffee, Patreon, TipeeeStream
+   npm install
+   npm run build
 
-5. Registrierung
-   - neue Accounts werden immer mit Rolle creator angelegt
-   - nach Registrierung erscheint eine Bestätigung
-   - kein automatisches direktes Wegspringen mehr ohne Hinweis
+3. Falls original_filename und mime_type noch nicht in der Cloudflare-D1 sind:
 
-WICHTIG: D1 Migration einmal ausführen
-Datei:
-db/v4_admin_social_donation.sql
+   npx wrangler d1 execute creatorforge-db --remote --command "ALTER TABLE uploads ADD COLUMN original_filename TEXT;"
+   npx wrangler d1 execute creatorforge-db --remote --command "ALTER TABLE uploads ADD COLUMN mime_type TEXT;"
 
-Cloudflare/Wrangler Beispiel:
-wrangler d1 execute DEINE_DB --file db/v4_admin_social_donation.sql
+   Wenn dort "duplicate column name" steht, ist das okay. Dann existiert die Spalte bereits.
 
-Falls eine Spalte laut Fehler bereits existiert, ist das kein Code-Fehler. Dann diese eine ALTER-TABLE-Zeile in der SQL-Datei auskommentieren und den Rest erneut ausführen.
+4. Indexe optional anlegen:
 
-Danach lokal testen:
-npm install
-npm run build
+   npx wrangler d1 execute creatorforge-db --remote --command "CREATE INDEX IF NOT EXISTS idx_uploads_user_status ON uploads(user_id, status);"
+   npx wrangler d1 execute creatorforge-db --remote --command "CREATE INDEX IF NOT EXISTS idx_uploads_downloads ON uploads(downloads);"
 
-Danach committen und pushen:
-git add src functions db package.json package-lock.json
-npm run build
-git status
-git commit -m "Expand admin moderation and validate creator links"
-git push
+5. Danach committen und pushen:
+
+   git add .
+   git commit -m "Expand creator profiles and fix download metadata"
+   git push
+
+Danach in Cloudflare Pages prüfen, ob der neue Deploy erfolgreich war.

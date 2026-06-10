@@ -166,9 +166,17 @@ export default function DownloadDetail() {
 
               <div>
                 <b>{upload.display_name || 'CreatorForge Creator'}</b>
-                <p className="text-sm text-zinc-500">Uploader</p>
+                <p className="text-sm text-zinc-500">
+                  {upload.creator_uploads_count || 0} Uploads · {upload.creator_downloads_count || 0} Downloads
+                </p>
               </div>
             </div>
+
+            {upload.creator_bio && (
+              <p className="mt-4 text-sm text-zinc-400">
+                {upload.creator_bio}
+              </p>
+            )}
 
             <div className="mt-5 flex flex-wrap gap-2">
               {upload.twitch && (

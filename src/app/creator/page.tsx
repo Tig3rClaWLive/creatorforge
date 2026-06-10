@@ -1,50 +1,167 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
-const links = [
+const socialLinks = [
   ['twitch', 'Twitch'],
   ['tiktok', 'TikTok'],
   ['youtube', 'YouTube'],
   ['kick', 'Kick'],
   ['discord', 'Discord'],
-  ['donation_url', 'Spenden'],
 ];
 
 export default function Creator() {
   const [items, setItems] = useState<any[]>([]);
+  const [q, setQ] = useState('');
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetch('/api/creators')
       .then((r) => r.json())
       .then((j) => setItems(j.creators || []))
-      .catch(() => setItems([]));
+      .catch(() => setItems([]))
+      .finally(() => setLoading(false));
   }, []);
+
+  const filtered = useMemo(() => {
+    const needle = q.trim().toLowerCase();
+
+    if (!needle) {
+      return items;
+    }
+
+    return items.filter((c) => {
+      const haystack = [
+        c.display_name,
+        c.bio,
+        c.twitch,
+        c.tiktok,
+        c.youtube,
+        c.kick,
+        c.discord,
+      ]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase();
+
+      return haystack.includes(needle);
+    });
+  }, [items, q]);
+
+  const totalCreators = items.length;
+  const totalUploads = items.reduce((sum, c) => sum + Number(c.uploads_count || 0), 0);
+  const totalDownloads = items.reduce((sum, c) => sum + Number(c.downloads_count || 0), 0);
 
   return (
     <section className="container py-16">
-      <h1 className="text-5xl font-black">Creator-Verzeichnis</h1>
-      <p className="mt-3 text-zinc-400">Kostenlose Profile für Creator, Streamer und Designer.</p>
+      <div className="flex flex-col justify-between gap-6 lg:flex-row lg:items-end">
+        <div>
+          <p className="text-sm uppercase tracking-widest text-orange-300">CreatorForge Community</p>
+          <h1 className="mt-3 text-5xl font-black">Creator-Verzeichnis</h1>
+          <p className="mt-3 max-w-3xl text-zinc-400">
+            Entdecke Streamer, Designer und Community-Creator mit kostenlosen Overlays, Tools und Ressourcen.
+          </p>
+        </div>
+
+        <input
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          className="input w-full lg:max-w-sm"
+          placeholder="Creator suchen..."
+        />
+      </div>
+
+      <div className="mt-8 grid gap-4 md:grid-cols-3">
+        <div className="card p-5">
+          <p className="text-sm text-zinc-400">Creator</p>
+          <b className="text-3xl">{totalCreators}</b>
+        </div>
+        <div className="card p-5">
+          <p className="text-sm text-zinc-400">Freigegebene Uploads</p>
+          <b className="text-3xl text-orange-300">{totalUploads}</b>
+        </div>
+        <div className="card p-5">
+          <p className="text-sm text-zinc-400">Downloads gesamt</p>
+          <b className="text-3xl text-green-300">{totalDownloads}</b>
+        </div>
+      </div>
+
+      {loading && (
+        <div className="card mt-8 p-8 text-zinc-400">Creator werden geladen...</div>
+      )}
+
+      {!loading && filtered.length === 0 && (
+        <div className="card mt-8 p-8 text-zinc-400">Keine Creator gefunden.</div>
+      )}
 
       <div className="mt-8 grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-        {items.map((c) => (
+        {filtered.map((c) => (
           <article className="card overflow-hidden" key={c.id}>
-            {c.banner_url && <img className="h-28 w-full object-cover" src={c.banner_url} alt="Banner" />}
-            <div className="p-6">
-              <div className="flex items-center gap-4">
-                {c.avatar_url && <img className="h-14 w-14 rounded-full object-cover" src={c.avatar_url} alt="Avatar" />}
+            <div className="relative h-32 bg-gradient-to-br from-zinc-900 to-zinc-800">
+              {c.banner_url && (
+                <img
+                  className="h-full w-full object-cover"
+                  src={c.banner_url}
+                  alt="Profilbanner"
+                />
+              )}
+
+              <div className="absolute -bottom-8 left-6">
+                {c.avatar_url ? (
+                  <img
+                    className="h-16 w-16 rounded-full border-4 border-zinc-950 object-cover"
+                    src={c.avatar_url}
+                    alt="Avatar"
+                  />
+                ) : (
+                  <div className="flex h-16 w-16 items-center justify-center rounded-full border-4 border-zinc-950 bg-orange-500 text-2xl font-black text-black">
+                    {String(c.display_name || '?').slice(0, 1).toUpperCase()}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="p-6 pt-12">
+              <div className="flex items-start justify-between gap-4">
                 <div>
                   <h2 className="text-2xl font-bold">{c.display_name}</h2>
-                  <p className="text-sm text-zinc-400">{c.uploads_count || 0} freigegebene Uploads</p>
+                  <p className="text-sm text-zinc-400">
+                    {c.uploads_count || 0} Uploads · {c.downloads_count || 0} Downloads
+                  </p>
                 </div>
+
+                {Number(c.uploads_count || 0) > 0 && (
+                  <span className="rounded-full bg-green-500/10 px-3 py-1 text-xs text-green-300">
+                    Aktiv
+                  </span>
+                )}
               </div>
 
-              <p className="mt-4 text-zinc-300">{c.bio || 'Noch keine Beschreibung.'}</p>
+              <p className="mt-4 min-h-12 text-zinc-300">
+                {c.bio || 'Noch keine Beschreibung.'}
+              </p>
+
+              {c.donation_url && (
+                <a
+                  href={c.donation_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn btn-primary mt-5 w-full"
+                >
+                  Creator unterstützen
+                </a>
+              )}
 
               <div className="mt-4 flex flex-wrap gap-2 text-sm">
-                {links.map(([key, label]) =>
+                {socialLinks.map(([key, label]) =>
                   c[key] ? (
-                    <a key={key} className="rounded-full bg-zinc-800 px-3 py-1" href={c[key]} target="_blank" rel="noopener noreferrer">
+                    <a
+                      key={key}
+                      className="rounded-full bg-zinc-800 px-3 py-1 text-zinc-200 hover:bg-zinc-700"
+                      href={c[key]}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
                       {label}
                     </a>
                   ) : null

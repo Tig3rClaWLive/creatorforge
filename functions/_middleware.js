@@ -227,13 +227,14 @@ export async function onRequest(context) {
                 creator_profiles.donation_url,
                 creator_profiles.avatar_url,
                 creator_profiles.banner_url,
-                COUNT(uploads.id) AS uploads_count
+                COUNT(uploads.id) AS uploads_count,
+                COALESCE(SUM(uploads.downloads), 0) AS downloads_count
          FROM creator_profiles
          LEFT JOIN uploads
            ON uploads.user_id = creator_profiles.user_id
           AND uploads.status = 'approved'
          GROUP BY creator_profiles.id
-         ORDER BY creator_profiles.created_at DESC`
+         ORDER BY downloads_count DESC, uploads_count DESC, creator_profiles.created_at DESC`
       ).all();
 
       return json({ creators: r.results || [] });
@@ -510,13 +511,15 @@ export async function onRequest(context) {
         `SELECT creator_profiles.display_name,
                 creator_profiles.avatar_url,
                 creator_profiles.banner_url,
-                COUNT(uploads.id) AS uploads_count
+                creator_profiles.donation_url,
+                COUNT(uploads.id) AS uploads_count,
+                COALESCE(SUM(uploads.downloads), 0) AS downloads_count
          FROM creator_profiles
          LEFT JOIN uploads
            ON uploads.user_id = creator_profiles.user_id
           AND uploads.status = 'approved'
          GROUP BY creator_profiles.id
-         ORDER BY uploads_count DESC
+         ORDER BY downloads_count DESC, uploads_count DESC
          LIMIT 6`
       ).all();
 
@@ -543,13 +546,26 @@ export async function onRequest(context) {
                 uploads.created_at,
                 uploads.preview_key,
                 creator_profiles.display_name,
+                creator_profiles.bio AS creator_bio,
                 creator_profiles.avatar_url,
                 creator_profiles.twitch,
                 creator_profiles.tiktok,
                 creator_profiles.youtube,
                 creator_profiles.kick,
                 creator_profiles.discord,
-                creator_profiles.donation_url
+                creator_profiles.donation_url,
+                (
+                  SELECT COUNT(*)
+                  FROM uploads u2
+                  WHERE u2.user_id = uploads.user_id
+                    AND u2.status = 'approved'
+                ) AS creator_uploads_count,
+                (
+                  SELECT COALESCE(SUM(u3.downloads), 0)
+                  FROM uploads u3
+                  WHERE u3.user_id = uploads.user_id
+                    AND u3.status = 'approved'
+                ) AS creator_downloads_count
          FROM uploads
          LEFT JOIN creator_profiles
            ON creator_profiles.user_id = uploads.user_id

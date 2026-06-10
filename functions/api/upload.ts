@@ -42,10 +42,9 @@ export const onRequestPost = async ({ request, env }) => {
   }
 
   const uploadId = id();
-  const key = `uploads/${user.id}/${uploadId}/${slugFile(file.name)}`;
-
   const originalFilename = clean(file.name, 255);
   const mimeType = file.type || 'application/octet-stream';
+  const key = `uploads/${user.id}/${uploadId}/${slugFile(originalFilename)}`;
 
   await env.R2.put(key, file.stream(), {
     httpMetadata: {
@@ -110,7 +109,5 @@ export const onRequestPost = async ({ request, env }) => {
     )
     .run();
 
-  return json({
-    message: 'Upload gespeichert und wartet auf Freigabe.',
-  });
+  return json({ message: 'Upload gespeichert und wartet auf Freigabe.' });
 };
