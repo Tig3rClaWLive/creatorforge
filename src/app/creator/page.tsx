@@ -15,13 +15,44 @@ export default function Creator() {
   const [q, setQ] = useState('');
   const [loading, setLoading] = useState(true);
 
+  async function load() {
+    setLoading(true);
+
+    try {
+      const r = await fetch('/api/creators');
+      const j = await r.json();
+
+      setItems(j.creators || []);
+    } catch {
+      setItems([]);
+    } finally {
+      setLoading(false);
+    }
+  }
+
   useEffect(() => {
-    fetch('/api/creators')
-      .then((r) => r.json())
-      .then((j) => setItems(j.creators || []))
-      .catch(() => setItems([]))
-      .finally(() => setLoading(false));
+    load();
   }, []);
+
+  async function followCreator(creatorId: string) {
+    const r = await fetch('/api/follow', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        creator_id: creatorId,
+      }),
+    });
+
+    const j = await r.json();
+
+    alert(j.message || j.error);
+
+    if (!j.error) {
+      load();
+    }
+  }
 
   const filtered = useMemo(() => {
     const needle = q.trim().toLowerCase();
@@ -158,7 +189,7 @@ export default function Creator() {
 
                   <p className="text-sm text-zinc-400">
                     {c.uploads_count || 0} Uploads · {c.downloads_count || 0}{' '}
-                    Downloads
+                    Downloads · {c.followers_count || 0} Follower
                   </p>
                 </div>
 
@@ -183,6 +214,13 @@ export default function Creator() {
                   Creator unterstützen
                 </a>
               )}
+
+              <button
+                className="btn btn-soft mt-3 w-full"
+                onClick={() => followCreator(c.user_id)}
+              >
+                Creator folgen / entfolgen
+              </button>
 
               <div className="mt-4 flex flex-wrap gap-2 text-sm">
                 {socialLinks.map(([key, label]) =>
