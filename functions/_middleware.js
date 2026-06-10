@@ -356,26 +356,90 @@ export async function onRequest(context) {
     }
 
     if (path === "/api/admin/users") {
-      const user = await currentUser(request, env);
+  const user = await currentUser(request, env);
 
-      if (!user || user.role !== "admin") {
-        return json({ error: "Nur Admins dürfen Nutzer verwalten." }, 403);
+  if (!user || user.role !== "admin") {
+    return json({ error: "Nur Admins dürfen Nutzer verwalten." }, 403);
+  }
+
+  if (request.method === "GET") {
+    const r = await env.DB.prepare(
+      `SELECT users.id,
+              users.email,
+              users.role,
+              users.created_at,
+              creator_profiles.display_name,
+              creator_profiles.verified
+       FROM users
+       LEFT JOIN creator_profiles
+         ON creator_profiles.user_id = users.id
+       ORDER BY users.created_at DESC`
+    ).all();
+
+    return json({ users: r.results || [] });
+  }
+
+  if (request.method === "POST") {
+    const b = await request.json();
+    const targetId = clean(b.id, 80);
+    const action = clean(b.action, 30);
+
+    if (action === "set-role") {
+      const role = clean(b.role, 20);
+
+      if (!targetId || !["creator", "moderator", "admin"].includes(role)) {
+        return json({ error: "Ungültige Rolle." }, 400);
       }
 
-      const r = await env.DB.prepare(
-        `SELECT users.id,
-                users.email,
-                users.role,
-                users.created_at,
-                creator_profiles.display_name
-         FROM users
-         LEFT JOIN creator_profiles
-           ON creator_profiles.user_id = users.id
-         ORDER BY users.created_at DESC`
-      ).all();
+      await env.DB.prepare("UPDATE users SET role=? WHERE id=?")
+        .bind(role, targetId)
+        .run();
 
-      return json({ users: r.results || [] });
+      await env.DB.prepare(
+        "INSERT INTO admin_logs (id,admin_user_id,action,target_id,message,created_at) VALUES (?,?,?,?,?,?)"
+      )
+        .bind(id(), user.id, "set-role", targetId, `Rolle geändert zu ${role}`, now())
+        .run();
+
+      return json({ message: "Rolle wurde geändert." });
     }
+
+    if (action === "set-verified") {
+      const verified = Number(b.verified) ? 1 : 0;
+
+      if (!targetId) {
+        return json({ error: "Nutzer fehlt." }, 400);
+      }
+
+      await env.DB.prepare(
+        "UPDATE creator_profiles SET verified=?, updated_at=? WHERE user_id=?"
+      )
+        .bind(verified, now(), targetId)
+        .run();
+
+      await env.DB.prepare(
+        "INSERT INTO admin_logs (id,admin_user_id,action,target_id,message,created_at) VALUES (?,?,?,?,?,?)"
+      )
+        .bind(
+          id(),
+          user.id,
+          "set-verified",
+          targetId,
+          verified ? "Creator verifiziert" : "Creator-Verifizierung entfernt",
+          now()
+        )
+        .run();
+
+      return json({
+        message: verified
+          ? "Creator wurde verifiziert."
+          : "Verifizierung wurde entfernt.",
+      });
+    }
+
+    return json({ error: "Unbekannte Aktion." }, 400);
+  }
+}
 
     if (path === "/api/admin/set-role" && request.method === "POST") {
       const user = await currentUser(request, env);
