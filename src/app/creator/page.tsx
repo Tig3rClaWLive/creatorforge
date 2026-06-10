@@ -49,17 +49,28 @@ export default function Creator() {
   }, [items, q]);
 
   const totalCreators = items.length;
-  const totalUploads = items.reduce((sum, c) => sum + Number(c.uploads_count || 0), 0);
-  const totalDownloads = items.reduce((sum, c) => sum + Number(c.downloads_count || 0), 0);
+  const totalUploads = items.reduce(
+    (sum, c) => sum + Number(c.uploads_count || 0),
+    0
+  );
+  const totalDownloads = items.reduce(
+    (sum, c) => sum + Number(c.downloads_count || 0),
+    0
+  );
 
   return (
     <section className="container py-16">
       <div className="flex flex-col justify-between gap-6 lg:flex-row lg:items-end">
         <div>
-          <p className="text-sm uppercase tracking-widest text-orange-300">CreatorForge Community</p>
+          <p className="text-sm uppercase tracking-widest text-orange-300">
+            CreatorForge Community
+          </p>
+
           <h1 className="mt-3 text-5xl font-black">Creator-Verzeichnis</h1>
+
           <p className="mt-3 max-w-3xl text-zinc-400">
-            Entdecke Streamer, Designer und Community-Creator mit kostenlosen Overlays, Tools und Ressourcen.
+            Entdecke Streamer, Designer und Community-Creator mit kostenlosen
+            Overlays, Tools und Ressourcen.
           </p>
         </div>
 
@@ -76,10 +87,12 @@ export default function Creator() {
           <p className="text-sm text-zinc-400">Creator</p>
           <b className="text-3xl">{totalCreators}</b>
         </div>
+
         <div className="card p-5">
           <p className="text-sm text-zinc-400">Freigegebene Uploads</p>
           <b className="text-3xl text-orange-300">{totalUploads}</b>
         </div>
+
         <div className="card p-5">
           <p className="text-sm text-zinc-400">Downloads gesamt</p>
           <b className="text-3xl text-green-300">{totalDownloads}</b>
@@ -87,11 +100,15 @@ export default function Creator() {
       </div>
 
       {loading && (
-        <div className="card mt-8 p-8 text-zinc-400">Creator werden geladen...</div>
+        <div className="card mt-8 p-8 text-zinc-400">
+          Creator werden geladen...
+        </div>
       )}
 
       {!loading && filtered.length === 0 && (
-        <div className="card mt-8 p-8 text-zinc-400">Keine Creator gefunden.</div>
+        <div className="card mt-8 p-8 text-zinc-400">
+          Keine Creator gefunden.
+        </div>
       )}
 
       <div className="mt-8 grid gap-6 md:grid-cols-2 xl:grid-cols-3">
@@ -115,7 +132,9 @@ export default function Creator() {
                   />
                 ) : (
                   <div className="flex h-16 w-16 items-center justify-center rounded-full border-4 border-zinc-950 bg-orange-500 text-2xl font-black text-black">
-                    {String(c.display_name || '?').slice(0, 1).toUpperCase()}
+                    {String(c.display_name || '?')
+                      .slice(0, 1)
+                      .toUpperCase()}
                   </div>
                 )}
               </div>
@@ -124,9 +143,22 @@ export default function Creator() {
             <div className="p-6 pt-12">
               <div className="flex items-start justify-between gap-4">
                 <div>
-                  <h2 className="text-2xl font-bold">{c.display_name}</h2>
+                  <h2 className="flex items-center gap-2 text-2xl font-bold">
+                    <span>{c.display_name}</span>
+
+                    {Number(c.verified) === 1 && (
+                      <span
+                        className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-sky-500/15 text-sm text-sky-300"
+                        title="Verifizierter Creator"
+                      >
+                        ✓
+                      </span>
+                    )}
+                  </h2>
+
                   <p className="text-sm text-zinc-400">
-                    {c.uploads_count || 0} Uploads · {c.downloads_count || 0} Downloads
+                    {c.uploads_count || 0} Uploads · {c.downloads_count || 0}{' '}
+                    Downloads
                   </p>
                 </div>
 

@@ -5,6 +5,7 @@ export const onRequestGet = async ({ env }) => {
     SELECT creator_profiles.id,
            creator_profiles.user_id,
            creator_profiles.display_name,
+	   creator_profiles.verified,
            creator_profiles.bio,
            creator_profiles.twitch,
            creator_profiles.tiktok,
