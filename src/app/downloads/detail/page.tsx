@@ -35,6 +35,21 @@ export default function DownloadDetail() {
     load();
   }, [id]);
 
+  async function favorite() {
+    if (!upload?.id) return;
+
+    const r = await fetch('/api/favorite', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        upload_id: upload.id,
+      }),
+    });
+
+    const j = await r.json();
+    setMsg(j.message || j.error);
+  }
+
   async function report() {
     if (!upload?.id) return;
 
@@ -58,7 +73,9 @@ export default function DownloadDetail() {
     return (
       <section className="container py-16">
         <h1 className="text-4xl font-black">Download nicht gefunden</h1>
+
         <p className="mt-4 text-orange-300">{msg}</p>
+
         <Link href="/downloads" className="btn btn-soft mt-6">
           Zurück zu Downloads
         </Link>
@@ -89,6 +106,12 @@ export default function DownloadDetail() {
         ← Zurück zu Downloads
       </Link>
 
+      {msg && (
+        <div className="card mt-6 border border-orange-500/30 p-4 text-orange-300">
+          {msg}
+        </div>
+      )}
+
       <div className="mt-8 grid gap-10 lg:grid-cols-[1.2fr_.8fr]">
         <div>
           {preview ? (
@@ -105,6 +128,7 @@ export default function DownloadDetail() {
 
           <div className="card mt-8 p-6">
             <h2 className="text-2xl font-black">Beschreibung</h2>
+
             <p className="mt-4 whitespace-pre-wrap text-zinc-300">
               {upload.description || 'Keine Beschreibung vorhanden.'}
             </p>
@@ -147,6 +171,10 @@ export default function DownloadDetail() {
               Download starten
             </a>
 
+            <button onClick={favorite} className="btn btn-soft mt-3 w-full">
+              ❤ Favorit hinzufügen / entfernen
+            </button>
+
             <button onClick={report} className="btn btn-soft mt-3 w-full">
               Upload melden
             </button>
@@ -166,8 +194,10 @@ export default function DownloadDetail() {
 
               <div>
                 <b>{upload.display_name || 'CreatorForge Creator'}</b>
+
                 <p className="text-sm text-zinc-500">
-                  {upload.creator_uploads_count || 0} Uploads · {upload.creator_downloads_count || 0} Downloads
+                  {upload.creator_uploads_count || 0} Uploads ·{' '}
+                  {upload.creator_downloads_count || 0} Downloads
                 </p>
               </div>
             </div>
@@ -180,37 +210,67 @@ export default function DownloadDetail() {
 
             <div className="mt-5 flex flex-wrap gap-2">
               {upload.twitch && (
-                <a href={upload.twitch} target="_blank" rel="noopener noreferrer" className="btn btn-soft">
+                <a
+                  href={upload.twitch}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn btn-soft"
+                >
                   Twitch
                 </a>
               )}
 
               {upload.youtube && (
-                <a href={upload.youtube} target="_blank" rel="noopener noreferrer" className="btn btn-soft">
+                <a
+                  href={upload.youtube}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn btn-soft"
+                >
                   YouTube
                 </a>
               )}
 
               {upload.tiktok && (
-                <a href={upload.tiktok} target="_blank" rel="noopener noreferrer" className="btn btn-soft">
+                <a
+                  href={upload.tiktok}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn btn-soft"
+                >
                   TikTok
                 </a>
               )}
 
               {upload.kick && (
-                <a href={upload.kick} target="_blank" rel="noopener noreferrer" className="btn btn-soft">
+                <a
+                  href={upload.kick}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn btn-soft"
+                >
                   Kick
                 </a>
               )}
 
               {upload.discord && (
-                <a href={upload.discord} target="_blank" rel="noopener noreferrer" className="btn btn-soft">
+                <a
+                  href={upload.discord}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn btn-soft"
+                >
                   Discord
                 </a>
               )}
 
               {upload.donation_url && (
-                <a href={upload.donation_url} target="_blank" rel="noopener noreferrer" className="btn btn-primary">
+                <a
+                  href={upload.donation_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn btn-primary"
+                >
                   Spenden
                 </a>
               )}
