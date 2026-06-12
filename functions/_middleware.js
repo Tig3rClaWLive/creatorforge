@@ -547,7 +547,103 @@ export async function onRequest(context) {
           ? "Upload freigegeben."
           : "Upload abgelehnt."
       });
-    }    
+    }
+        if (path === "/api/favorite" && request.method === "POST") {
+      const user = await currentUser(request, env);
+
+      if (!user) {
+        return json({ error: "Bitte einloggen." }, 401);
+      }
+
+      const b = await request.json();
+      const uploadId = clean(b.upload_id, 80);
+
+      if (!uploadId) {
+        return json({ error: "Upload fehlt." }, 400);
+      }
+
+      const upload = await env.DB.prepare(
+        "SELECT id FROM uploads WHERE id=? AND status='approved'"
+      )
+        .bind(uploadId)
+        .first();
+
+      if (!upload) {
+        return json({ error: "Upload nicht gefunden." }, 404);
+      }
+
+      const existing = await env.DB.prepare(
+        `SELECT id
+         FROM favorites
+         WHERE user_id=?
+           AND upload_id=?`
+      )
+        .bind(user.id, uploadId)
+        .first();
+
+      if (existing) {
+        await env.DB.prepare(
+          `DELETE FROM favorites
+           WHERE user_id=?
+             AND upload_id=?`
+        )
+          .bind(user.id, uploadId)
+          .run();
+
+        return json({
+          favorite: false,
+          message: "Favorit entfernt.",
+        });
+      }
+
+      await env.DB.prepare(
+        `INSERT INTO favorites
+          (id,user_id,upload_id,created_at)
+         VALUES (?,?,?,?)`
+      )
+        .bind(id(), user.id, uploadId, now())
+        .run();
+
+      return json({
+        favorite: true,
+        message: "Favorit gespeichert.",
+      });
+    }
+
+    if (path === "/api/my-favorites") {
+      const user = await currentUser(request, env);
+
+      if (!user) {
+        return json({ error: "Bitte einloggen." }, 401);
+      }
+
+      const r = await env.DB.prepare(
+        `SELECT uploads.id,
+                uploads.title,
+                uploads.description,
+                uploads.category,
+                uploads.tags,
+                uploads.downloads,
+                uploads.preview_key,
+                uploads.created_at,
+                creator_profiles.display_name,
+                favorites.created_at AS favorited_at
+         FROM favorites
+         JOIN uploads
+           ON uploads.id = favorites.upload_id
+          AND uploads.status = 'approved'
+         LEFT JOIN creator_profiles
+           ON creator_profiles.user_id = uploads.user_id
+         WHERE favorites.user_id = ?
+         ORDER BY favorites.created_at DESC`
+      )
+        .bind(user.id)
+        .all();
+
+      return json({
+        favorites: r.results || [],
+      });
+    }
       if (path === "/api/follow" && request.method === "POST") {
   const user = await currentUser(request, env);
 
