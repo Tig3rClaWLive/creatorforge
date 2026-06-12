@@ -213,11 +213,12 @@ export async function onRequest(context) {
       return json({ categories: r.results || [] });
     }
 
-    if (path === "/api/creators") {
+     if (path === "/api/creators") {
       const r = await env.DB.prepare(
         `SELECT creator_profiles.id,
                 creator_profiles.user_id,
                 creator_profiles.display_name,
+                creator_profiles.verified,
                 creator_profiles.bio,
                 creator_profiles.twitch,
                 creator_profiles.tiktok,
@@ -227,14 +228,24 @@ export async function onRequest(context) {
                 creator_profiles.donation_url,
                 creator_profiles.avatar_url,
                 creator_profiles.banner_url,
-                COUNT(uploads.id) AS uploads_count,
-                COALESCE(SUM(uploads.downloads), 0) AS downloads_count
+                COUNT(DISTINCT uploads.id) AS uploads_count,
+                (
+                  SELECT COALESCE(SUM(u2.downloads), 0)
+                  FROM uploads u2
+                  WHERE u2.user_id = creator_profiles.user_id
+                    AND u2.status = 'approved'
+                ) AS downloads_count,
+                COUNT(DISTINCT follows.id) AS followers_count
          FROM creator_profiles
          LEFT JOIN uploads
            ON uploads.user_id = creator_profiles.user_id
           AND uploads.status = 'approved'
+         LEFT JOIN follows
+           ON follows.creator_user_id = creator_profiles.user_id
          GROUP BY creator_profiles.id
-         ORDER BY downloads_count DESC, uploads_count DESC, creator_profiles.created_at DESC`
+         ORDER BY downloads_count DESC,
+                  uploads_count DESC,
+                  creator_profiles.created_at DESC`
       ).all();
 
       return json({ creators: r.results || [] });
@@ -536,7 +547,73 @@ export async function onRequest(context) {
           ? "Upload freigegeben."
           : "Upload abgelehnt."
       });
-    }    if (path === "/api/home") {
+    }    
+      if (path === "/api/follow" && request.method === "POST") {
+  const user = await currentUser(request, env);
+
+  if (!user) {
+    return json({ error: "Bitte einloggen." }, 401);
+  }
+
+  const b = await request.json();
+  const creatorId = clean(b.creator_id, 80);
+
+  if (!creatorId) {
+    return json({ error: "Creator fehlt." }, 400);
+  }
+
+  if (creatorId === user.id) {
+    return json({ error: "Du kannst dir nicht selbst folgen." }, 400);
+  }
+
+  const creator = await env.DB.prepare(
+    "SELECT user_id FROM creator_profiles WHERE user_id=?"
+  )
+    .bind(creatorId)
+    .first();
+
+  if (!creator) {
+    return json({ error: "Creator nicht gefunden." }, 404);
+  }
+
+  const existing = await env.DB.prepare(
+    `SELECT id
+     FROM follows
+     WHERE follower_user_id=?
+       AND creator_user_id=?`
+  )
+    .bind(user.id, creatorId)
+    .first();
+
+  if (existing) {
+    await env.DB.prepare(
+      `DELETE FROM follows
+       WHERE follower_user_id=?
+         AND creator_user_id=?`
+    )
+      .bind(user.id, creatorId)
+      .run();
+
+    return json({
+      following: false,
+      message: "Creator entfolgt.",
+    });
+  }
+
+  await env.DB.prepare(
+    `INSERT INTO follows
+      (id,follower_user_id,creator_user_id,created_at)
+     VALUES (?,?,?,?)`
+  )
+    .bind(id(), user.id, creatorId, now())
+    .run();
+
+  return json({
+    following: true,
+    message: "Creator gefolgt.",
+  });
+}
+      if (path === "/api/home") {
       const latest = await env.DB.prepare(
         `SELECT uploads.id,
                 uploads.title,
