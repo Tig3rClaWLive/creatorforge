@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 
 const socialLinks = [
@@ -203,6 +204,13 @@ export default function Creator() {
               <p className="mt-4 min-h-12 text-zinc-300">
                 {c.bio || 'Noch keine Beschreibung.'}
               </p>
+              
+               <Link
+                 href={`/creator/profile?id=${encodeURIComponent(c.user_id)}`}
+                 className="btn btn-primary mt-5 w-full"
+                >
+                 Profil ansehen
+               </Link>
 
               {c.donation_url && (
                 <a
