@@ -548,6 +548,56 @@ export async function onRequest(context) {
           : "Upload abgelehnt."
       });
     }
+         if (path === "/api/delete-my-upload" && request.method === "POST") {
+      const user = await currentUser(request, env);
+
+      if (!user) {
+        return json({ error: "Bitte einloggen." }, 401);
+      }
+
+      const b = await request.json();
+      const uploadId = clean(b.id, 80);
+
+      if (!uploadId) {
+        return json({ error: "Upload fehlt." }, 400);
+      }
+
+      const upload = await env.DB.prepare(
+        "SELECT * FROM uploads WHERE id=? AND user_id=?"
+      )
+        .bind(uploadId, user.id)
+        .first();
+
+      if (!upload) {
+        return json({
+          error: "Upload nicht gefunden oder keine Berechtigung.",
+        }, 404);
+      }
+
+      if (upload.file_key) {
+        await env.R2.delete(upload.file_key);
+      }
+
+      if (upload.preview_key) {
+        await env.R2.delete(upload.preview_key);
+      }
+
+      await env.DB.prepare("DELETE FROM reports WHERE upload_id=?")
+        .bind(uploadId)
+        .run();
+
+      await env.DB.prepare("DELETE FROM favorites WHERE upload_id=?")
+        .bind(uploadId)
+        .run();
+
+      await env.DB.prepare("DELETE FROM uploads WHERE id=?")
+        .bind(uploadId)
+        .run();
+
+      return json({
+        message: "Upload wurde gelöscht.",
+      });
+    }
          if (path === "/api/edit-upload" && request.method === "POST") {
       const user = await currentUser(request, env);
 

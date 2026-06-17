@@ -343,7 +343,7 @@ export default function Dashboard() {
                       </p>
                     )}
 
-                    <div className="mt-3 flex flex-wrap gap-2">
+                                        <div className="mt-3 flex flex-wrap gap-2">
                       <button
                         className="btn btn-soft"
                         onClick={() => setEditingId(u.id)}
@@ -361,8 +361,36 @@ export default function Dashboard() {
                           Ansehen
                         </Link>
                       )}
-                    </div>
-                  </>
+
+                      <button
+                        className="btn btn-soft"
+                        onClick={async () => {
+                          if (!confirm('Diesen Upload wirklich löschen?')) {
+                            return;
+                          }
+
+                          const r = await fetch('/api/delete-my-upload', {
+                            method: 'POST',
+                            headers: { 'content-type': 'application/json' },
+                            body: JSON.stringify({
+                              id: u.id,
+                            }),
+                          });
+
+                          const j = await r.json().catch(() => ({}));
+
+                          setMsg(
+                            j.message || j.error || 'Aktion abgeschlossen.'
+                          );
+
+                          if (r.ok) {
+                            load();
+                          }
+                        }}
+                      >
+                        Löschen
+                      </button>
+                    </div>                  </>
                 )}
               </div>
             ))}
