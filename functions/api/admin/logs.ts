@@ -1,4 +1,4 @@
-import { json, currentUser } from '../../_utils';
+import { json, currentUser } from '../_utils';
 
 export const onRequestGet = async ({ request, env }) => {
   const user = await currentUser(request, env);
