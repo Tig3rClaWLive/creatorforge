@@ -143,6 +143,9 @@ export default function Admin() {
         <Link href="/admin/users" className="btn btn-soft">
           Nutzerverwaltung
         </Link>
+        <Link href="/admin/logs" className="btn btn-soft">
+          Aktivitäten
+        </Link>
       </div>
 
       {stats && (
